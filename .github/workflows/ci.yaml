@@ -1,0 +1,49 @@
+name: ci 
+on:
+  push:
+    branches:
+      - master 
+      - main
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # env:
+    #   VCDEMY_TOKEN: ${{ secrets.VCDEMY_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 這行很重要，確保抓取完整 Git 記錄
+      - name: Configure Git Credentials
+        run: |
+          git config user.name vcdemy
+          git config user.email vcdemy@gmail.com
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV 
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+      - name: Installing required packages
+        run: |
+          pip install mkdocs-material
+          pip install pillow 
+          pip install cairosvg
+          pip install mkdocs-jupyter     # 如果需要使用 mkdocs-jupyter，則這裡需要安裝
+          pip install mkdocs-rss-plugin
+          pip install mkdocs-git-committers-plugin-2
+          pip install mkdocs-git-revision-date-localized-plugin
+      # - name: Check Secret
+      #   run: |
+      #     printf "VCDEMY_TOKEN starts with: %s*****\n" "${VCDEMY_TOKEN:0:5}"   
+      - name: Build MkDocs
+        run: |
+          mkdocs build --clean
+      - name: Deploy mkdocs to github pages
+        run: mkdocs gh-deploy --force
